@@ -21,7 +21,7 @@ public class App {
 		systemAnswers.add(new ResourceImpl("true"));
 		
 		for (ASpotter m : new ASpotter[] { new Spotlight() }) {
-			Map<String, List<Entity>> ents = m.getEntities("What is a pencil?");
+			Map<String, List<Entity>> ents = m.getEntities("where is germany");
 			if (!ents.isEmpty()) {
 				System.out.println("Succes. Found " + ents.size() + " entities.");
 				
