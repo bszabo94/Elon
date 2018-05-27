@@ -10,7 +10,7 @@ public class QuestionWordCheck {
 		
 		for (int i = 0; i < arrayOfWords.length; i++) {
 			for (int j = 0; j < questionWords.length; j++) {
-				if (arrayOfWords[i] == questionWords[j]) {
+				if (arrayOfWords[i].equalsIgnoreCase(questionWords[j])) {
 					return j;
 				}
 			}
