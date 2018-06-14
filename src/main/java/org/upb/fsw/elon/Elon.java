@@ -12,6 +12,12 @@ import org.aksw.qa.annotation.sparql.SimpleQuantityRanker;
 import org.aksw.qa.annotation.spotter.ASpotter;
 import org.aksw.qa.annotation.spotter.Spotlight;
 import org.aksw.qa.commons.datastructure.Entity;
+import org.apache.jena.query.Query;
+import org.apache.jena.query.QueryExecution;
+import org.apache.jena.query.QueryExecutionFactory;
+import org.apache.jena.query.QueryFactory;
+import org.apache.jena.query.ResultSet;
+import org.apache.jena.query.ResultSetFormatter;
 import org.apache.jena.rdf.model.Resource;
 
 import com.google.common.collect.Sets;
@@ -19,6 +25,7 @@ import com.google.common.collect.Sets;
 public class Elon {
 	
 	private static Elon elon = null;
+	private static String modelURI = "http://dbpedia.org/sparql";
 	private ASpotter spotter;
 	private IndexDBO classes, properties;
 	private SimpleQuantityRanker ranker;
@@ -128,15 +135,30 @@ public class Elon {
 		if(property == null)
 			throw new UnableToAnswerException("No property found in the question.");
 		
-		System.out.println("--debug--");
+		/*System.out.println("--debug--");
 		
 		for(Entity e : entities) {
 			System.out.println("entity is : " + e.getLabel());
 			System.out.println("class is: " + e.getType());
 			System.out.println("property is: " + property);
-		}
+		}*/
+		
+		//TODO from model get query and execute it
 		
 		return "The answer is 42. Still at development phase, duh.";
+	}
+	
+	private ResultSet doQuery(String queryString) throws UnableToAnswerException{
+		
+			Query query = QueryFactory.create(queryString);
+			
+			if(!query.isSelectType())
+				throw new UnableToAnswerException("Only Select queries can be answered.");
+				
+			QueryExecution exec = QueryExecutionFactory.sparqlService(modelURI, queryString);
+			ResultSet res = exec.execSelect();
+			
+			return res;
 	}
 
 }
