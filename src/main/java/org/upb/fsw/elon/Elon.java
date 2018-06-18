@@ -16,16 +16,19 @@ import org.apache.jena.query.Query;
 import org.apache.jena.query.QueryExecution;
 import org.apache.jena.query.QueryExecutionFactory;
 import org.apache.jena.query.QueryFactory;
+import org.apache.jena.query.QuerySolution;
 import org.apache.jena.query.ResultSet;
 import org.apache.jena.query.ResultSetFormatter;
 import org.apache.jena.rdf.model.Resource;
+import org.h2.engine.SysProperties;
 
 import com.google.common.collect.Sets;
 
 public class Elon {
 	
 	private static Elon elon = null;
-	private static String modelURI = "http://dbpedia.org/sparql";
+	private static String modelURI = "http://dbpedia.org/sparql",
+			queryHeader = "prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> PREFIX dbo: <http://dbpedia.org/ontology/> PREFIX  dct:  <http://purl.org/dc/terms/> prefix dbp: <http://dbpedia.org/property/>";
 	private ASpotter spotter;
 	private IndexDBO classes, properties;
 	private SimpleQuantityRanker ranker;
@@ -69,13 +72,13 @@ public class Elon {
 	}
 	
 	private List<Entity> cleanEntities(List<Entity> entities) {
+		
 		List<Entity> cleanedEntities = new ArrayList<Entity>();
 		
 		for(Entity e : entities) {
 			if(!e.getPosTypesAndCategories().isEmpty())
 				cleanedEntities.add(e);
 		}
-		
 		return cleanedEntities;
 	}
 	
@@ -87,11 +90,13 @@ public class Elon {
 		if(q.charAt(q.length()-1) == '?')
 			q.substring(0, q.length()-1);
 		
+		
 		for(String word : q.split(" ")) {
 			List<String> currProps = properties.search(word);
 			if(!currProps.isEmpty())
 				possibleProperties.add(currProps);
 		}
+		
 			
 			
 		for(List<String> props : possibleProperties)
@@ -111,8 +116,22 @@ public class Elon {
 		return ranker.rank(propsList);
 	}
 	
+	private List<Entity> removeFalseEntities(List<Entity> entities) {
+		List<Entity> cleanEntities = new ArrayList<Entity>();
+		
+		for(Entity e: entities) {
+			try {
+				setClass(e);
+				cleanEntities.add(e);
+			} catch (Exception ex) {}
+		}
+		
+		
+		return cleanEntities;
+	}
 	
-	public String ask(String question) throws UnableToAnswerException{
+	
+	public String ask(String question) throws UnableToAnswerException {
 		
 		if(question.equals(""))
 			throw new UnableToAnswerException("Your question is empty.");
@@ -127,26 +146,40 @@ public class Elon {
 		if(entities.isEmpty())
 			throw new UnableToAnswerException("No entities with classes found in the question.");
 		
-		for(Entity e : entities)
-			setClass(e);
 		
 		String property = getProperty(question);
 		
 		if(property == null)
 			throw new UnableToAnswerException("No property found in the question.");
 		
-		/*System.out.println("--debug--");
 		
-		for(Entity e : entities) {
-			System.out.println("entity is : " + e.getLabel());
-			System.out.println("class is: " + e.getType());
-			System.out.println("property is: " + property);
-		}*/
+		entities = removeFalseEntities(entities);
+			
 		
-		//TODO from model get query and execute it
+			
 		
-		return "The answer is 42. Still at development phase, duh.";
+		SparqlQueryTemplate phQuery = new SparqlQueryTemplate("select ?o where  { <%s> <%s> ?o } ");
+		//TODO add proper templates
+		List<String> props = new ArrayList<String>();
+		props.add(entities.get(0).getUris().get(0).getURI());
+		props.add(property);		
+		System.out.println(entities);
+		System.out.println(property);
+		
+		String phFinishedQuery = phQuery.buildQueryString(props);
+		List<QuerySolution> res = ResultSetFormatter.toList(doQuery(phFinishedQuery));
+		
+		return formAnswer(property, entities.get(0).getLabel(), res.get(0));
 	}
+	
+	private String formAnswer(String prop, String ent, QuerySolution qs) {
+		String answer = "";
+		answer += "The " + prop + " of " + ent + " is " + qs.get("o");
+		
+		
+		return answer;
+	}
+		
 	
 	private ResultSet doQuery(String queryString) throws UnableToAnswerException{
 		
