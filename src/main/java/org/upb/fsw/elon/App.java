@@ -17,16 +17,18 @@ import org.apache.jena.rdf.model.impl.ResourceImpl;
 
 public class App {
 
-	public static void main(String[] args) {
+	public static void main(String[] args) throws UnableToAnswerException {
+		
 		
 		Set<RDFNode> systemAnswers = new HashSet();
 		
 		systemAnswers.add(new ResourceImpl("true"));
-		
+		String question = "What is the population of Germany?";
 		for (ASpotter m : new ASpotter[] { new Spotlight() }) {
-			Map<String, List<Entity>> ents = m.getEntities("Where is Germany?");
+			Map<String, List<Entity>> ents = m.getEntities("What is the population of Germany?");
 			if (!ents.isEmpty()) {
-				System.out.println("Succes. Found " + ents.get("en").size() + " entities.");
+				System.out.println("Succes. Found " + ents.get("en").size() + " entities."+ ents.get("en"));
+				System.out.println("question word is: " + QuestionWordCheck.SearchQuestionWord(question));
 				
 				/*for (Entity ent : ents.get("en")) {
 					System.out.println(ent.toString());
@@ -49,15 +51,9 @@ public class App {
 				
 				
 				
-				
-				
 			} else {
 				System.out.println("No entities found.");
 			}
-		}
-		
-		
-		
+		}	
 	}
-
 }

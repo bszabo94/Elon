@@ -25,7 +25,6 @@ import org.h2.engine.SysProperties;
 import com.google.common.collect.Sets;
 
 public class Elon {
-	
 	private static Elon elon = null;
 	private static String modelURI = "http://dbpedia.org/sparql",
 			queryHeader = "prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> PREFIX dbo: <http://dbpedia.org/ontology/> PREFIX  dct:  <http://purl.org/dc/terms/> prefix dbp: <http://dbpedia.org/property/>";
@@ -175,7 +174,6 @@ public class Elon {
 	private String formAnswer(String prop, String ent, QuerySolution qs) {
 		String answer = "";
 		answer += "The " + prop + " of " + ent + " is " + qs.get("o");
-		
 		
 		return answer;
 	}

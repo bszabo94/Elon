@@ -16,9 +16,5 @@ public class SparqlQueryBuilder {
 		this.templates = createTemplates(); //TODO
 	}
 	
-	public SparqlQueryTemplate getTemplates(Question q) {
-		//TODO
-		return this.templates.get(0);
-	}
 
 }
