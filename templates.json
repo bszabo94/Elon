@@ -1,0 +1,45 @@
+{
+  "who": {
+    "SELECT": "?person",
+    "WHERE": [
+      "{?person dbr: did/is ?property.",
+      "?person dbr: something ?property2}"
+    ]
+  },
+  "when": {
+    "SELECT": "?thingThatHappened",
+    "WHERE": [
+      "{?thingThatHappened dbr: whichThing ?property.}"
+    ]
+  },
+    "whichBiggestTallestHighest": {
+      "SELECT": " ?thing ",
+      "WHERE": ["{ ?thing dbr: adjective ?property .",
+      "?place dbr: noun ? property2}"],
+      "ORDER BY DESC": "(?property)"
+    },
+    "whichSmallestShortestLowest": {
+      "SELECT": "?thing",
+      "WHERE": ["{ ?thing dbr: adjective ?property .",
+      "?place dbr: noun ? property2}"],
+      "ORDER BY ASC": "(?property)" 
+    },
+    "howMany": {
+      "SELECT": "DISTINCT(COUNT(?book))",
+      "WHERE": ["{ ?book dbr:something ?property . }"]
+    },
+    "howManyMoreThan": {
+      "SELECT": "DISTINCT(COUNT(?book))",
+      "WHERE": ["{ ?book dbr:something ?property . }"],
+      "FILTER": "(?property > value)"
+    },
+    "howManyLessThan": {
+      "SELECT": "DISTINCT(COUNT(?book))",
+      "WHERE": ["{?book dbr:something ?property .}"],
+      "FILTER": "(?property < value)"
+    },
+    "where": {
+      "SELECT": "?somewhere",
+      "WHERE": ["{?something dbr: thingAsked ?property}"]
+    }
+}
