@@ -6,15 +6,18 @@ import java.util.List;
 public class SparqlQueryBuilder {
 	private List<SparqlQueryTemplate> templates;
 	
-	private List<SparqlQueryTemplate> createTemplates(){
-		List<SparqlQueryTemplate> templates = new ArrayList<SparqlQueryTemplate>();
-		
-		return templates;
+	private void loadTemplates(){		
+		this.templates.add(new SparqlQueryTemplate("select ?uri where  { <%s> <%s> ?uri } "));
 	}
 	
 	public SparqlQueryBuilder() {
-		this.templates = createTemplates(); //TODO
+		this.templates = new ArrayList<SparqlQueryTemplate>();
+		loadTemplates();
 	}
 	
-
+	public SparqlQueryTemplate selectTemplate(String question) {
+		return this.templates.get(0);
+	}
+	
+	
 }

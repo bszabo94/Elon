@@ -1,5 +1,6 @@
 package org.upb.fsw.elon;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class SparqlQueryTemplate {
@@ -12,18 +13,24 @@ public class SparqlQueryTemplate {
 	
 	public String buildQueryString(List<String> parameters) {
 		
-		String finalQuery = query;
+		List<String> finalQueryParts = new ArrayList<String>();
+		String finalQuery = this.query;
+		String right;
 		
-		for(String param: parameters) {
+		for(String param:parameters) {
 			int pos = finalQuery.indexOf("%s");
 			String left = finalQuery.substring(0, pos + 2);
-			String right = finalQuery.substring(pos+2, finalQuery.length());
+			finalQuery = finalQuery.substring(pos+2, finalQuery.length());
 			left = String.format(left, param);
-			finalQuery = left + right;
+			finalQueryParts.add(left);
 		}
+		
+		right = finalQuery;
+		finalQuery = new String();
+		for(String part: finalQueryParts)
+			finalQuery += part;
+		finalQuery += right;
 		
 		return finalQuery;
 	}
-	
-
 }

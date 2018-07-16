@@ -1,12 +1,12 @@
 package org.upb.fsw.elon;
 
-import java.io.BufferedOutputStream;
 import java.io.BufferedWriter;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -23,13 +23,10 @@ import org.apache.jena.query.Query;
 import org.apache.jena.query.QueryExecution;
 import org.apache.jena.query.QueryExecutionFactory;
 import org.apache.jena.query.QueryFactory;
-import org.apache.jena.query.QuerySolution;
 import org.apache.jena.query.ResultSet;
 import org.apache.jena.query.ResultSetFactory;
 import org.apache.jena.query.ResultSetFormatter;
-import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.Resource;
-import org.apache.jena.sparql.engine.binding.Binding;
 
 import com.google.common.collect.Sets;
 
@@ -42,15 +39,14 @@ public class Elon {
 	private ASpotter spotter;
 	private IndexDBO classes, properties;
 	private SimpleQuantityRanker ranker;
-	public int wrongCounter, queryCounter;
-	public List<String> foundProperties;
-	public List<Entity> foundEntities;
+	private SparqlQueryBuilder querybuilder;
 	
 	private Elon() {
 		this.spotter = new Spotlight();
 		this.classes = new IndexDBO_classes();
 		this.properties = new IndexDBO_properties();
 		this.ranker = new SimpleQuantityRanker();
+		this.querybuilder = new SparqlQueryBuilder();
 	}
 	
 	public static Elon getInstance() {
@@ -131,7 +127,7 @@ public class Elon {
 		return ranker.rank(propsList);*/
 	}
 	
-	private List<Entity> removeFalseEntities(List<Entity> entities) {
+	/*private List<Entity> removeFalseEntities(List<Entity> entities) {
 		List<Entity> cleanEntities = new ArrayList<Entity>();
 		
 		for(Entity e: entities) {
@@ -143,7 +139,7 @@ public class Elon {
 		
 		
 		return cleanEntities;
-	}
+	}*/
 	
 	private List<Entity> addClassToEntities(List<Entity> entities){
 		List<Entity> annotatedEntities = new ArrayList<Entity>(entities);
@@ -156,10 +152,27 @@ public class Elon {
 		return annotatedEntities;
 	}
 	
+	private List<String> rankProperties(List<String> properties, boolean ascending){
+		List<String> rankedProperties = new ArrayList<String>(),
+				propsToRank = new ArrayList<String>(properties);
+		
+		SimpleQuantityRanker ranker = new SimpleQuantityRanker();
+		
+		while(!propsToRank.isEmpty()) {
+			String best = ranker.rank(propsToRank);
+			rankedProperties.add(best);
+			propsToRank.remove(best);
+		}
+		
+		if(ascending)
+			Collections.reverse(rankedProperties);
+
+		return rankedProperties;
+	}
+	
 	public void ask(List<IQuestion> iquestions, String ofilename) throws IOException {
 		
 		BufferedWriter bw = new BufferedWriter(new FileWriter(new File(ofilename)));
-		//BufferedWriter errorBW = new BufferedWriter(new FileWriter(new File("elonerrorquestions.txt")));
 		boolean first = true;
 		bw.write("{\"questions\": [");
 		
@@ -167,17 +180,10 @@ public class Elon {
 		for(IQuestion iq : iquestions) {
 			String question = iq.getLanguageToQuestion().get("en");
 			String answer;
-			foundEntities = null; foundProperties = null;
 			try {
-				System.err.println("DEBUG, Question " + iquestions.indexOf(iq) + " of " + iquestions.size() + " : " + question);
+				//System.out.println("DEBUG, Question " + iquestions.indexOf(iq) + " of " + iquestions.size() + " : " + question);
 				answer = elon.ask(question);
 			} catch (Exception e) {
-				/*errorBW.write(">>>>>>>>>>> Nr " + iquestions.indexOf(iq) + "\n" );
-				errorBW.write("Question: " + question + "\n");
-				errorBW.write("Error: " + e.getMessage() + "\n");
-				errorBW.write("Found entities: " + foundEntities + "\n");
-				errorBW.write("Found properties: " + foundProperties + "\n");
-				errorBW.write("<<<<<<<<<<< Nr " + iquestions.indexOf(iq) + "\n" );*/
 				continue;
 			}
 			
@@ -197,9 +203,7 @@ public class Elon {
 		
 		bw.write("]}");
 		bw.close();
-		//errorBW.close();
 		System.out.println(counter + " out of " + iquestions.size() + " questions has been answered.");
-		System.out.println(wrongCounter + " out of " + iquestions.size() + " questions had no entity and relation.");
 	}
 	
 	public String ask(String question) throws UnableToAnswerException {
@@ -212,30 +216,14 @@ public class Elon {
 		List<Entity> entities = spotter.getEntities(question).get("en");
 		
 		if(entities == null || entities.isEmpty()) {
-			System.err.println("NO ENTITIES AT: " + question);
-			wrongCounter++;
 			throw new UnableToAnswerException("No entities found in the question.");
 		}
-			
-		System.out.println("DEBUG: entities found in question: \n" + entities);
-		
-		
-		
-		//entities = cleanEntities(entities);
-		
-		//if(entities.isEmpty())
-			//throw new UnableToAnswerException("No entities with classes found in the question.");
-		
-		
+				
 		List<String> properties = getProperty(question);
 		
 		if(properties.isEmpty() && entities.size() == 1) {
-			wrongCounter++;
 			throw new UnableToAnswerException("No property and only one entity found.");
 		}
-			
-		foundProperties = properties;
-		foundEntities = entities;
 		
 		if(properties.isEmpty()) {			
 			entities = addClassToEntities(entities);
@@ -249,17 +237,14 @@ public class Elon {
 			}
 			
 			if(properties.isEmpty()) {
-				wrongCounter++;
 				throw new UnableToAnswerException("No property found in the question.");
 			}
 				
-		}
-						
-		foundProperties = properties;
-		SparqlQueryTemplate phQuery = new SparqlQueryTemplate("select ?uri where  { <%s> <%s> ?uri } ");
-		//TODO add proper templates
+		}			
 		
 		
+		properties = rankProperties(properties, false);
+		SparqlQueryTemplate phQuery = this.querybuilder.selectTemplate(question);	
 		
 		List<String> props = new ArrayList<String>();
 		props.add(entities.get(0).getUris().get(0).getURI());
@@ -282,7 +267,7 @@ public class Elon {
 			props.remove(property);
 		}
 		
-		throw new UnableToAnswerException("No result for query");		
+		throw new UnableToAnswerException("No result for query.");		
 	}
 	
 
