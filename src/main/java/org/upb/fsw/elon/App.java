@@ -1,7 +1,5 @@
 package org.upb.fsw.elon;
 
-
-import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
@@ -14,7 +12,7 @@ import org.aksw.qa.commons.load.LoaderController;
 
 public class App {
 
-	public static void main(String[] args) throws UnableToAnswerException, IOException {
+	public static void main(String[] args) {
 
 		Elon elon = Elon.getInstance();
 		List<IQuestion> testquestions = LoaderController.load(Dataset.QALD8_Test_Multilingual);
