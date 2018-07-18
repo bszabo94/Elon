@@ -30,17 +30,33 @@ import org.apache.jena.rdf.model.Resource;
 
 import com.google.common.collect.Sets;
 
-
+/**
+ * 
+ * Basically the class Elon implements all the logic to do the task.
+ *
+ */
 public class Elon {
 	private static Elon elon = null;
+	/**
+	 * URI to the knowledge base
+	 */
 	private static String modelURI = "http://dbpedia.org/sparql",
+			/**
+			 * currently unused, since NLIWOD uses full namespaces
+			 */
 			queryHeader = "prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> PREFIX dbo: <http://dbpedia.org/ontology/> PREFIX  dct:  <http://purl.org/dc/terms/> prefix dbp: <http://dbpedia.org/property/>";
+	/**
+	 * Holds the last query generated, useful to write that to the results too
+	 */
 	private String lastQuery;
+	//NLIWOD objects
 	private ASpotter spotter;
 	private IndexDBO classes, properties;
 	private SimpleQuantityRanker ranker;
+	//Querybuilder
 	private SparqlQueryBuilder querybuilder;
 	
+	//singleton
 	private Elon() {
 		this.spotter = new Spotlight();
 		this.classes = new IndexDBO_classes();
@@ -65,6 +81,10 @@ public class Elon {
 		return this.spotter;
 	}
 	
+	/**
+	 * 
+	 * Using NLIWOD tries to find the class of an entity.
+	 */
 	private void setClass(Entity e) {
 		List<String> posClasses = new ArrayList<String>();
 		for(Resource r : e.getPosTypesAndCategories())
@@ -80,6 +100,10 @@ public class Elon {
 		e.setType(posClass);
 	}
 	
+	/**
+	 * Removes entities without classes
+	 * Currently unused, the logic became deprecated
+	 */
 	private List<Entity> cleanEntities(List<Entity> entities) {
 		
 		List<Entity> cleanedEntities = new ArrayList<Entity>();
@@ -91,15 +115,19 @@ public class Elon {
 		return cleanedEntities;
 	}
 	
+	/**
+	 * Gets the properties found in a string
+	 */
 	private List<String> getProperty(String question){
 		String q = new String(question);
 		List<List<String>> possibleProperties = new ArrayList<List<String>>();
 		Set<String> propSet = new HashSet<String>();
 		
+		//removes question mark if there is one
 		if(q.charAt(q.length()-1) == '?')
 			q.substring(0, q.length()-1);
 		
-		
+		//iterates all over the words
 		for(String word : q.split(" ")) {
 			List<String> currProps = properties.search(word);
 			if(!currProps.isEmpty())
@@ -107,10 +135,11 @@ public class Elon {
 		}
 		
 			
-			
+		
 		for(List<String> props : possibleProperties)
 			propSet.addAll(props);
 		
+		//creates an intersection of the possible properties, if more than one found
 		for(List<String> props : possibleProperties)
 			propSet = Sets.intersection(propSet, new HashSet<String>(props));
 		
@@ -141,6 +170,9 @@ public class Elon {
 		return cleanEntities;
 	}*/
 	
+	/**
+	 * Set the class of all Entities in a List
+	 */
 	private List<Entity> addClassToEntities(List<Entity> entities){
 		List<Entity> annotatedEntities = new ArrayList<Entity>(entities);
 		for(Entity e: annotatedEntities) {
@@ -152,6 +184,10 @@ public class Elon {
 		return annotatedEntities;
 	}
 	
+	/**
+	 * 
+	 * Ranks a List of given properties in ascending or descending order according to the logic of SimpleQuantityRanker
+	 */
 	private List<String> rankProperties(List<String> properties, boolean ascending){
 		List<String> rankedProperties = new ArrayList<String>(),
 				propsToRank = new ArrayList<String>(properties);
@@ -170,6 +206,10 @@ public class Elon {
 		return rankedProperties;
 	}
 	
+	/**
+	 * 
+	 * Iterates over a List of Questions, and writes the answers in QALD JSON format, to a file with a given filename
+	 */
 	public void ask(List<IQuestion> iquestions, String ofilename) throws IOException {
 		
 		BufferedWriter bw = new BufferedWriter(new FileWriter(new File(ofilename)));
@@ -177,13 +217,16 @@ public class Elon {
 		bw.write("{\"questions\": [");
 		
 		int counter = 0;
+		//iterating trough questions
 		for(IQuestion iq : iquestions) {
 			String question = iq.getLanguageToQuestion().get("en");
 			String answer;
 			try {
 				//System.out.println("DEBUG, Question " + iquestions.indexOf(iq) + " of " + iquestions.size() + " : " + question);
+				//giving the question to our system
 				answer = elon.ask(question);
 			} catch (Exception e) {
+				//unanswerable questions are skipped entirely from the result
 				continue;
 			}
 			
@@ -206,6 +249,10 @@ public class Elon {
 		System.out.println(counter + " out of " + iquestions.size() + " questions has been answered.");
 	}
 	
+	/**
+	 * 
+	 * Tries to answer a question in natural language. The answer is a JSON formatted ResultSet
+	 */
 	public String ask(String question) throws UnableToAnswerException {
 		
 		if(question.equals(""))
@@ -213,18 +260,22 @@ public class Elon {
 		
 		this.lastQuery = new String();
 		ASpotter spotter = new Spotlight();
+		//getting entities from question
 		List<Entity> entities = spotter.getEntities(question).get("en");
 		
 		if(entities == null || entities.isEmpty()) {
 			throw new UnableToAnswerException("No entities found in the question.");
 		}
-				
+		
+		//getting properties from question
 		List<String> properties = getProperty(question);
 		
 		if(properties.isEmpty() && entities.size() == 1) {
 			throw new UnableToAnswerException("No property and only one entity found.");
 		}
 		
+		//if there are no proerties found, but more than one entities, it is possible that one of the entities are a property
+		//tries to make properties out of entities with no classes
 		if(properties.isEmpty()) {			
 			entities = addClassToEntities(entities);
 			for(Entity e: entities) {
@@ -249,14 +300,16 @@ public class Elon {
 		List<String> props = new ArrayList<String>();
 		props.add(entities.get(0).getUris().get(0).getURI());
 		
+		//tries a query with all the ordered properties, until it gets a result for the query
 		for(String property : properties) {
 			props.add(property);
 			String phFinishedQuery = phQuery.buildQueryString(props);
-			System.out.println(phFinishedQuery);
+			//System.out.println(phFinishedQuery);
 			this.lastQuery = phFinishedQuery;
 			ResultSet res = ResultSetFactory.copyResults(doQuery(lastQuery));
 			ResultSet res2 = ResultSetFactory.copyResults(doQuery(lastQuery));
 			
+			//if there is a result, we can take that
 			if(ResultSetFormatter.toList(res2).size() != 0) {
 				ByteArrayOutputStream bos = new ByteArrayOutputStream();
 				ResultSetFormatter.outputAsJSON(bos, res);
@@ -276,7 +329,7 @@ public class Elon {
 		return this.lastQuery;
 	}
 		
-	
+	//does a query againts a knowledge base. Only select queries are working now.
 	private ResultSet doQuery(String queryString) throws UnableToAnswerException{
 		
 			Query query = QueryFactory.create(queryString);

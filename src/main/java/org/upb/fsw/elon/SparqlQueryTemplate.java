@@ -2,15 +2,27 @@ package org.upb.fsw.elon;
 
 import java.util.ArrayList;
 import java.util.List;
-
+/**
+ * 
+ * Objects of this class represents a template
+ *
+ */
 public class SparqlQueryTemplate {
 	
+	/**
+	 * basically the "skeleton" of the query
+	 */
 	private String query;
 	
 	public SparqlQueryTemplate(String query) {
 		this.query = query;
 	}
 	
+	/**
+	 * 
+	 * Building the actualy query from the skeleton and given parameters
+	 * Using parameterized string to achieve this
+	 */
 	public String buildQueryString(List<String> parameters) {
 		
 		List<String> finalQueryParts = new ArrayList<String>();
