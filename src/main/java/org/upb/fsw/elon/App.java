@@ -51,7 +51,10 @@ public class App {
 		}*/
 		
 		Elon elon = Elon.getInstance();
+		System.out.println("Elon created.");
 		Javalin app = Javalin.create().start(443);
+		
+		System.out.println("Server created.");
 		app.post("/", ctx -> {
 			String query = ctx.formParam("query"),
 					lang = ctx.formParam("lang");
@@ -60,9 +63,15 @@ public class App {
 			queryobject.put("query", query);
 			queryobject.put("lang", lang);
 			
-			QALDResponse resp = elon.processQuestion(queryobject);
+			try {
+				QALDResponse resp = elon.processQuestion(queryobject);
+				ctx.json(resp.getJSON());
+			}catch (Exception e) {
+				ctx.result(e.getLocalizedMessage());
+			}
+			
 
-			ctx.json(resp.getJSON());
+			
 		});
 	}
 	

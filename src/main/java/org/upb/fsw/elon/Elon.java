@@ -197,8 +197,9 @@ public class Elon {
 				propsToRank = new ArrayList<String>(properties);
 		
 		SimpleQuantityRanker ranker = new SimpleQuantityRanker();
-		
+		System.out.println("ranking in progress");
 		while(!propsToRank.isEmpty()) {
+			System.out.println("sorting: " + propsToRank);
 			String best = ranker.rank(propsToRank);
 			rankedProperties.add(best);
 			propsToRank.remove(best);
@@ -297,8 +298,8 @@ public class Elon {
 				
 		}			
 		
-		
-		properties = rankProperties(properties, false);
+		if(properties.size() > 1)
+			properties = rankProperties(properties, false);
 		SparqlQueryTemplate phQuery = this.querybuilder.selectTemplate(question);	
 		
 		List<String> props = new ArrayList<String>();
@@ -332,7 +333,8 @@ public class Elon {
 		String question = (String) jsonq.get("query");
 		String lang = (String) jsonq.get("lang");
 		JSONObject questionobject = qaldresponse.addQuestion(question, lang);
-		
+		System.out.println("Processed question");
+		System.out.println(jsonq.toJSONString());
 		
 		if(question.equals(""))
 			throw new UnableToAnswerException("Your question is empty.");
@@ -345,10 +347,10 @@ public class Elon {
 		if(entities == null || entities.isEmpty()) {
 			throw new UnableToAnswerException("No entities found in the question.");
 		}
-		
+		System.out.println("Entities extracted");
 		//getting properties from question
 		List<String> properties = getProperty(question);
-		
+		System.out.println("Property tracking finished");
 		if(properties.isEmpty() && entities.size() == 1) {
 			throw new UnableToAnswerException("No property and only one entity found.");
 		}
@@ -372,9 +374,11 @@ public class Elon {
 				
 		}			
 		
-		
+		System.out.println("Beginning ranking properties");
 		properties = rankProperties(properties, false);
+		System.out.println("properties ranked");
 		SparqlQueryTemplate phQuery = this.querybuilder.selectTemplate(question);	
+		System.out.println("Possible properties processed");
 		
 		List<String> props = new ArrayList<String>();
 		props.add(entities.get(0).getUris().get(0).getURI());
