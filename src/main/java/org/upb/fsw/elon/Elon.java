@@ -27,6 +27,10 @@ import org.apache.jena.query.ResultSet;
 import org.apache.jena.query.ResultSetFactory;
 import org.apache.jena.query.ResultSetFormatter;
 import org.apache.jena.rdf.model.Resource;
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
 
 import com.google.common.collect.Sets;
 
@@ -323,7 +327,91 @@ public class Elon {
 		throw new UnableToAnswerException("No result for query.");		
 	}
 	
-
+	public QALDResponse processQuestion(JSONObject jsonq) throws UnableToAnswerException, ParseException {
+		QALDResponse qaldresponse = new QALDResponse();
+		String question = (String) jsonq.get("query");
+		String lang = (String) jsonq.get("lang");
+		JSONObject questionobject = qaldresponse.addQuestion(question, lang);
+		
+		
+		if(question.equals(""))
+			throw new UnableToAnswerException("Your question is empty.");
+		
+		this.lastQuery = new String();
+		ASpotter spotter = new Spotlight();
+		//getting entities from question
+		List<Entity> entities = spotter.getEntities(question).get("en");
+		
+		if(entities == null || entities.isEmpty()) {
+			throw new UnableToAnswerException("No entities found in the question.");
+		}
+		
+		//getting properties from question
+		List<String> properties = getProperty(question);
+		
+		if(properties.isEmpty() && entities.size() == 1) {
+			throw new UnableToAnswerException("No property and only one entity found.");
+		}
+		
+		//if there are no proerties found, but more than one entities, it is possible that one of the entities are a property
+		//tries to make properties out of entities with no classes
+		if(properties.isEmpty()) {			
+			entities = addClassToEntities(entities);
+			for(Entity e: entities) {
+				if(entities.size() == 1)
+					break;
+				if(e.getType().equals("")) {
+					properties.add("http://dbpedia.org/ontology/" + e.getLabel());
+					entities.remove(e);
+				}
+			}
+			
+			if(properties.isEmpty()) {
+				throw new UnableToAnswerException("No property found in the question.");
+			}
+				
+		}			
+		
+		
+		properties = rankProperties(properties, false);
+		SparqlQueryTemplate phQuery = this.querybuilder.selectTemplate(question);	
+		
+		List<String> props = new ArrayList<String>();
+		props.add(entities.get(0).getUris().get(0).getURI());
+		
+		//tries a query with all the ordered properties, until it gets a result for the query
+		for(String property : properties) {
+			props.add(property);
+			String phFinishedQuery = phQuery.buildQueryString(props);
+			//System.out.println(phFinishedQuery);
+			this.lastQuery = phFinishedQuery;
+			ResultSet res = ResultSetFactory.copyResults(doQuery(lastQuery));
+			ResultSet res2 = ResultSetFactory.copyResults(doQuery(lastQuery));
+			
+			//if there is a result, we can take that
+			if(ResultSetFormatter.toList(res2).size() != 0) {
+				ByteArrayOutputStream bos = new ByteArrayOutputStream();
+				ResultSetFormatter.outputAsJSON(bos, res);
+				
+				JSONObject sparql = new JSONObject();
+				sparql.put("sparql", this.lastQuery);
+				questionobject.put("query", sparql);
+				
+				JSONArray resarray = new JSONArray();
+				questionobject.put("answers", resarray);
+				
+				
+				JSONParser jsonparser = new JSONParser();
+				JSONObject resultobject = (JSONObject) jsonparser.parse(new String(bos.toByteArray()));
+				resarray.add(resultobject);
+				return qaldresponse;
+			}
+			
+			props.remove(property);
+		}
+		
+		throw new UnableToAnswerException("No result for query.");		
+	}
 	
 	public String getLastQuery() {
 		return this.lastQuery;

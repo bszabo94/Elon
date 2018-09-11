@@ -5,9 +5,14 @@ import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
+import javax.xml.ws.RespectBinding;
+
 import org.aksw.qa.commons.datastructure.IQuestion;
 import org.aksw.qa.commons.load.Dataset;
 import org.aksw.qa.commons.load.LoaderController;
+import org.json.JSONWriter;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.ParseException;
 
 import io.javalin.Javalin;
 
@@ -33,11 +38,31 @@ public class App {
 			e.printStackTrace();
 		}*/
 		
-		Javalin app = Javalin.create().start(7000);
+		
+		/*Elon elon = Elon.getInstance();
+		try {
+			JSONObject question = new JSONObject();
+			question.put("lang", "en");
+			question.put("query", "What is the birthplace of Angela Merkel?");
+			System.out.println(elon.processQuestion(question).getJSON().toJSONString());
+		} catch (UnableToAnswerException | ParseException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}*/
+		
+		Elon elon = Elon.getInstance();
+		Javalin app = Javalin.create().start(443);
 		app.post("/", ctx -> {
 			String query = ctx.formParam("query"),
 					lang = ctx.formParam("lang");
-			ctx.result("You asked \"" + query + "\" in " + lang + ".");	
+			
+			JSONObject queryobject = new JSONObject();
+			queryobject.put("query", query);
+			queryobject.put("lang", lang);
+			
+			QALDResponse resp = elon.processQuestion(queryobject);
+
+			ctx.json(resp.getJSON());
 		});
 	}
 	
