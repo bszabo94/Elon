@@ -5,8 +5,6 @@ import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
-import javax.xml.ws.RespectBinding;
-
 import org.aksw.qa.commons.datastructure.IQuestion;
 import org.aksw.qa.commons.load.Dataset;
 import org.aksw.qa.commons.load.LoaderController;
@@ -50,11 +48,17 @@ public class App {
 			e.printStackTrace();
 		}*/
 		
+		int port = Integer.parseInt(args[0]);
+		
 		Elon elon = Elon.getInstance();
 		System.out.println("Elon created.");
-		Javalin app = Javalin.create().start(443);
+		Javalin app = Javalin.create().start(port);
 		
 		System.out.println("Server created.");
+		app.exception(Exception.class, (e, ctx) -> {
+			e.printStackTrace();
+			ctx.result("got exception");
+		});
 		app.post("/", ctx -> {
 			String query = ctx.formParam("query"),
 					lang = ctx.formParam("lang");
@@ -67,7 +71,8 @@ public class App {
 				QALDResponse resp = elon.processQuestion(queryobject);
 				ctx.json(resp.getJSON());
 			}catch (Exception e) {
-				ctx.result(e.getLocalizedMessage());
+				e.printStackTrace();
+				ctx.result("got an exception in try");
 			}
 			
 

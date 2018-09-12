@@ -194,7 +194,8 @@ public class Elon {
 	 */
 	private List<String> rankProperties(List<String> properties, boolean ascending){
 		List<String> rankedProperties = new ArrayList<String>(),
-				propsToRank = new ArrayList<String>(properties);
+				propsToRank = new ArrayList<String>(properties),
+				currentRound;
 		
 		SimpleQuantityRanker ranker = new SimpleQuantityRanker();
 		System.out.println("ranking in progress");
@@ -298,8 +299,14 @@ public class Elon {
 				
 		}			
 		
-		if(properties.size() > 1)
-			properties = rankProperties(properties, false);
+		//TODO removed temporally
+		//if(properties.size() > 1)
+		//	properties = rankProperties(properties, false);
+		
+		String tempProp = properties.get(0);
+		properties = new ArrayList<String>();
+		properties.add(tempProp);
+		
 		SparqlQueryTemplate phQuery = this.querybuilder.selectTemplate(question);	
 		
 		List<String> props = new ArrayList<String>();
@@ -375,7 +382,9 @@ public class Elon {
 		}			
 		
 		System.out.println("Beginning ranking properties");
-		properties = rankProperties(properties, false);
+		if(properties.size() > 1)
+			properties = rankProperties(properties, false);
+		
 		System.out.println("properties ranked");
 		SparqlQueryTemplate phQuery = this.querybuilder.selectTemplate(question);	
 		System.out.println("Possible properties processed");
@@ -423,7 +432,8 @@ public class Elon {
 		
 	//does a query againts a knowledge base. Only select queries are working now.
 	private ResultSet doQuery(String queryString) throws UnableToAnswerException{
-		
+			System.out.println("doing query with: " + queryString);
+			System.out.println(queryString == null);
 			Query query = QueryFactory.create(queryString);
 			
 			if(!query.isSelectType())

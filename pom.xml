@@ -1,53 +1,90 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-  <modelVersion>4.0.0</modelVersion>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
 
-  <groupId>org.upb.fsw</groupId>
-  <artifactId>elon</artifactId>
-  <version>1.1.0</version>
-  <packaging>jar</packaging>
+	<groupId>org.upb.fsw</groupId>
+	<artifactId>elon</artifactId>
+	<version>1.1.0</version>
+	<packaging>jar</packaging>
 
-  <name>elon</name>
+	<name>elon</name>
 
-  <properties>
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-  </properties>
-  
-  <contributors>
-  	<contributor>
-  		<name>Bence Szabó</name>
-  		<email>bszabo@wenetto.hu</email>
-  		<organization>University of Debrecen</organization>	
-  	</contributor>
-  	<contributor>
-  		<name>Juan Drets</name>
-		<email>jdrets@hotmail.com</email>
-  		<organization>Universidad Ort Uruguay</organization>
-  	</contributor>
-  </contributors>
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+	</properties>
 
-  <dependencies>
-    <dependency>
-    	<groupId>org.aksw.qa</groupId>
-    	<artifactId>annotation</artifactId>
-    	<version>0.3.4</version>
-	</dependency>
-	<dependency>
-    	<groupId>io.javalin</groupId>
-    	<artifactId>javalin</artifactId>
-    <version>2.1.1</version>
-</dependency>
-  </dependencies>
-  <repositories>
-  	<repository>
-            <id>maven.aksw.internal</id>
-            <name>University Leipzig, AKSW Maven2 Repository</name>
-            <url>http://maven.aksw.org/archiva/repository/internal</url>
-        </repository>
-        <repository>
-            <id>maven.aksw.snapshots</id>
-            <name>University Leipzig, AKSW Maven2 Repository</name>
-            <url>http://maven.aksw.org/archiva/repository/snapshots</url>
-</repository>
-  </repositories>
+	<contributors>
+		<contributor>
+			<name>Bence Szabó</name>
+			<email>bszabo@wenetto.hu</email>
+			<organization>University of Debrecen</organization>
+		</contributor>
+		<contributor>
+			<name>Juan Drets</name>
+			<email>jdrets@hotmail.com</email>
+			<organization>Universidad Ort Uruguay</organization>
+		</contributor>
+	</contributors>
+
+	<dependencies>
+		<dependency>
+			<groupId>org.aksw.qa</groupId>
+			<artifactId>annotation</artifactId>
+			<version>0.3.4</version>
+		</dependency>
+		<dependency>
+			<groupId>io.javalin</groupId>
+			<artifactId>javalin</artifactId>
+			<version>2.1.1</version>
+		</dependency>
+	</dependencies>
+	<repositories>
+		<repository>
+			<id>maven.aksw.internal</id>
+			<name>University Leipzig, AKSW Maven2 Repository</name>
+			<url>http://maven.aksw.org/archiva/repository/internal</url>
+		</repository>
+		<repository>
+			<id>maven.aksw.snapshots</id>
+			<name>University Leipzig, AKSW Maven2 Repository</name>
+			<url>http://maven.aksw.org/archiva/repository/snapshots</url>
+		</repository>
+	</repositories>
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>3.3</version>
+				<configuration>
+					<source>1.8</source>
+					<target>1.8</target>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-assembly-plugin</artifactId>
+				<executions>
+					<execution>
+						<phase>package</phase>
+						<goals>
+							<goal>single</goal>
+						</goals>
+						<configuration>
+							<archive>
+								<manifest>
+									<addClasspath>true</addClasspath>
+									<mainClass>org.upb.fsw.elon.App</mainClass>
+								</manifest>
+							</archive>
+							<descriptorRefs>
+								<descriptorRef>jar-with-dependencies</descriptorRef>
+							</descriptorRefs>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+	</build>
 </project>
