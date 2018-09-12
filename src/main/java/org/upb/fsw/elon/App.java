@@ -11,16 +11,19 @@ import org.aksw.qa.commons.load.LoaderController;
 import org.json.JSONWriter;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.ParseException;
-
-import io.javalin.Javalin;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
 /**
  *Just a class to hold the main function for testing the Elon class
  */
+@SpringBootApplication
 public class App {
 
 	public static void main(String[] args) {
-
+		SpringApplication.run(App.class, args);
 		
 		/*Elon elon = Elon.getInstance();
 		//loads both the qald8 train and test questions
@@ -48,7 +51,7 @@ public class App {
 			e.printStackTrace();
 		}*/
 		
-		int port = Integer.parseInt(args[0]);
+		/*int port = Integer.parseInt(args[0]);
 		
 		Elon elon = Elon.getInstance();
 		System.out.println("Elon created.");
@@ -77,7 +80,7 @@ public class App {
 			
 
 			
-		});
+		});*/
 	}
 	
 }

@@ -5,6 +5,7 @@ import org.json.simple.JSONObject;
 
 public class QALDResponse {
 	private JSONObject jsonobject;
+	
 	public QALDResponse() {
 		this.jsonobject = new JSONObject();
 		jsonobject.put("questions", new JSONArray());

@@ -335,13 +335,10 @@ public class Elon {
 		throw new UnableToAnswerException("No result for query.");		
 	}
 	
-	public QALDResponse processQuestion(JSONObject jsonq) throws UnableToAnswerException, ParseException {
+	public QALDResponse processQuestion(String question, String lang) throws UnableToAnswerException, ParseException {
 		QALDResponse qaldresponse = new QALDResponse();
-		String question = (String) jsonq.get("query");
-		String lang = (String) jsonq.get("lang");
 		JSONObject questionobject = qaldresponse.addQuestion(question, lang);
 		System.out.println("Processed question");
-		System.out.println(jsonq.toJSONString());
 		
 		if(question.equals(""))
 			throw new UnableToAnswerException("Your question is empty.");
