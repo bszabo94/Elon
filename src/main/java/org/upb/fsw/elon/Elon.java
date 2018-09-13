@@ -27,8 +27,8 @@ import org.apache.jena.query.ResultSet;
 import org.apache.jena.query.ResultSetFactory;
 import org.apache.jena.query.ResultSetFormatter;
 import org.apache.jena.rdf.model.Resource;
-import org.json.simple.JSONArray;
-import org.json.simple.JSONObject;
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
@@ -335,13 +335,13 @@ public class Elon {
 		throw new UnableToAnswerException("No result for query.");		
 	}
 	
-	public QALDResponse processQuestion(String question, String lang) throws UnableToAnswerException, ParseException {
+	public QALDResponse processQuestion(String question, String lang) throws ParseException, JSONException {
 		QALDResponse qaldresponse = new QALDResponse();
-		JSONObject questionobject = qaldresponse.addQuestion(question, lang);
-		System.out.println("Processed question");
+		qaldresponse.addQuestion(question, lang);
 		
 		if(question.equals(""))
-			throw new UnableToAnswerException("Your question is empty.");
+			//throw new UnableToAnswerException("Your question is empty.");
+			return qaldresponse;
 		
 		this.lastQuery = new String();
 		ASpotter spotter = new Spotlight();
@@ -349,14 +349,16 @@ public class Elon {
 		List<Entity> entities = spotter.getEntities(question).get("en");
 		
 		if(entities == null || entities.isEmpty()) {
-			throw new UnableToAnswerException("No entities found in the question.");
+			//throw new UnableToAnswerException("No entities found in the question.");
+			return qaldresponse;
 		}
-		System.out.println("Entities extracted");
+
 		//getting properties from question
 		List<String> properties = getProperty(question);
-		System.out.println("Property tracking finished");
+
 		if(properties.isEmpty() && entities.size() == 1) {
-			throw new UnableToAnswerException("No property and only one entity found.");
+			//throw new UnableToAnswerException("No property and only one entity found.");
+			return qaldresponse;
 		}
 		
 		//if there are no proerties found, but more than one entities, it is possible that one of the entities are a property
@@ -373,18 +375,17 @@ public class Elon {
 			}
 			
 			if(properties.isEmpty()) {
-				throw new UnableToAnswerException("No property found in the question.");
+				//throw new UnableToAnswerException("No property found in the question.");
+				return qaldresponse;
 			}
 				
 		}			
 		
-		System.out.println("Beginning ranking properties");
+
 		if(properties.size() > 1)
 			properties = rankProperties(properties, false);
 		
-		System.out.println("properties ranked");
 		SparqlQueryTemplate phQuery = this.querybuilder.selectTemplate(question);	
-		System.out.println("Possible properties processed");
 		
 		List<String> props = new ArrayList<String>();
 		props.add(entities.get(0).getUris().get(0).getURI());
@@ -395,32 +396,31 @@ public class Elon {
 			String phFinishedQuery = phQuery.buildQueryString(props);
 			//System.out.println(phFinishedQuery);
 			this.lastQuery = phFinishedQuery;
-			ResultSet res = ResultSetFactory.copyResults(doQuery(lastQuery));
-			ResultSet res2 = ResultSetFactory.copyResults(doQuery(lastQuery));
+			ResultSet res;
+			ResultSet res2;
+			try {
+				res = ResultSetFactory.copyResults(doQuery(lastQuery));
+				res2 = ResultSetFactory.copyResults(doQuery(lastQuery));
+			} catch (UnableToAnswerException e) {
+				return qaldresponse;
+			}
 			
 			//if there is a result, we can take that
 			if(ResultSetFormatter.toList(res2).size() != 0) {
 				ByteArrayOutputStream bos = new ByteArrayOutputStream();
 				ResultSetFormatter.outputAsJSON(bos, res);
+								
+				JSONObject resultobject =  new JSONObject(new String(bos.toByteArray()));
 				
-				JSONObject sparql = new JSONObject();
-				sparql.put("sparql", this.lastQuery);
-				questionobject.put("query", sparql);
+				qaldresponse.addAnswer(null, this.lastQuery, resultobject);
 				
-				JSONArray resarray = new JSONArray();
-				questionobject.put("answers", resarray);
-				
-				
-				JSONParser jsonparser = new JSONParser();
-				JSONObject resultobject = (JSONObject) jsonparser.parse(new String(bos.toByteArray()));
-				resarray.add(resultobject);
 				return qaldresponse;
 			}
 			
 			props.remove(property);
 		}
 		
-		throw new UnableToAnswerException("No result for query.");		
+		return qaldresponse;		
 	}
 	
 	public String getLastQuery() {
