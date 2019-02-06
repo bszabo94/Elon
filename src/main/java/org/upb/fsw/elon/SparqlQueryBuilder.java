@@ -25,5 +25,4 @@ public class SparqlQueryBuilder {
 		return this.templates.get(0);
 	}
 	
-	
 }
