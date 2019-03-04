@@ -407,7 +407,8 @@ public class Elon {
 //		if(properties.size() > 1)
 //			properties = rankProperties(properties, false);
 		
-		SparqlQueryTemplate phQuery = this.querybuilder.selectTemplate(question);	
+//		SparqlQueryTemplate phQuery = this.querybuilder.selectTemplate(question);	
+		SparqlQueryTemplate phQuery = new SparqlQueryTemplate("TODO....");
 		
 //		qaldresponse.setFoundRelations(properties);
 		
