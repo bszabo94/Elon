@@ -1,26 +1,113 @@
 package org.upb.fsw.elon;
 
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.IOException;
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+
+import org.aksw.qa.annotation.spotter.ASpotter;
+import org.aksw.qa.annotation.spotter.Spotlight;
+import org.aksw.qa.commons.datastructure.Entity;
+
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 
 import edu.stanford.nlp.simple.Sentence;
 import edu.stanford.nlp.trees.Tree;
 
 public class SparqlQueryBuilder {
 
-	public static void main(String[] args) {
+	private ASpotter spotter;
 
-		SparqlQueryBuilder sparqlbuilder = new SparqlQueryBuilder();
-		String question = "What is the birthplace of Angela Merkel?";
+	public SparqlQueryBuilder() {
+		this.spotter = new Spotlight();
+	}
 
-		Sentence sentence = new Sentence(question);
-		Tree tree = sentence.parse();
-		Tree sbarq = getChildbyLabel(tree, "SBARQ");
+	public static void main(String[] args) throws URISyntaxException, IOException {
 
-		System.out.println(tree.pennString());
-		System.out.println(tree.depth());
-		System.out.println(sbarq.depth());
-		
+		ASpotter spotter = new Spotlight();
+
+//		URL url = SparqlQueryBuilder.class.getResource("/qald-9-train-multilingual.json");
+
+//		System.out.println(url);
+//		File file = new File(url);
+		String qald9train = "";
+//		System.out.println("File read");
+//		System.out.println(file);
+
+		BufferedWriter writer = Files.newBufferedWriter(Paths.get("NPentities.txt"));
+		try {
+			qald9train = new String(
+					Files.readAllBytes(
+							Paths.get(SparqlQueryBuilder.class.getResource("/qald-9-train-multilingual.json").toURI())),
+					StandardCharsets.UTF_8);
+
+		} catch (IOException | URISyntaxException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
+		JsonParser parser = new JsonParser();
+		JsonObject jo = parser.parse(qald9train).getAsJsonObject();
+		JsonArray questions = jo.getAsJsonArray("questions");
+		for (int i = 0; i < 20; i++) {
+
+//		}
+//		for (JsonElement q : questions) {
+			JsonElement q = questions.get(i);
+			String question = "";
+			for (JsonElement innerq : q.getAsJsonObject().getAsJsonArray("question")) {
+				if (innerq.getAsJsonObject().getAsJsonPrimitive("language").getAsString().equals("en")) {
+					question = innerq.getAsJsonObject().getAsJsonPrimitive("string").getAsString();
+					break;
+				}
+			}
+
+			Sentence sentence = new Sentence(question);
+			Tree tree = sentence.parse();
+			if (!tree.getChild(0).label().value().equals("SBARQ"))
+				continue;
+
+			List<Tree> np = getNodes(tree, "NP");
+
+			writer.write("-----------------------\n");
+			writer.write(question + "\n");
+			writer.write(tree.pennString());
+			writer.write("__________________\n");
+
+			for (Tree t : np) {
+				if (possibleEntity(t)) {
+					List<Entity> foundEntities = spotter.getEntities(treeToString(t, true)).get("en");
+					writer.write(treeToString(t, true) + "\n***********\n");
+					if (foundEntities == null || foundEntities.isEmpty())
+						continue;
+					for (Entity e : foundEntities) {
+						writer.write(e.getUris().get(0).getURI()+"\n");
+					}
+				}
+			}
+//				writer.write("depth: " + t.depth() + "\n" + t.pennString() + "\n");
+		}
+
+		writer.close();
+
+//		String question = "What is the birthplace of Angela Merkel?";
+//
+//		Sentence sentence = new Sentence(question);
+//		Tree tree = sentence.parse();
+//		Tree sbarq = getChildbyLabel(tree, "SBARQ");
+//
+//		System.out.println(tree.pennString());
+//		System.out.println(tree.depth());
+//		System.out.println(sbarq.depth());
 
 //		SparqlQueryBuilder.processQuestion(question);
 
@@ -47,7 +134,10 @@ public class SparqlQueryBuilder {
 	}
 
 	private static String evalNP(Tree np) {
-		
+		if (possibleEntity(np)) {
+
+		}
+
 		return null;
 	}
 
@@ -62,6 +152,17 @@ public class SparqlQueryBuilder {
 
 //		System.out.println("----");
 //		System.out.println(treeToString(tree, false));
+	}
+
+	private static boolean possibleEntity(Tree t) {
+		if (t.depth() > 2)
+			return false;
+
+		for (Tree child : t.getChildrenAsList())
+			if (child.label().value().equals("NNP") || child.label().value().equals("NNPS"))
+				return true;
+
+		return false;
 	}
 
 	private static Tree getChildbyLabel(Tree tree, String label) {
@@ -91,6 +192,21 @@ public class SparqlQueryBuilder {
 				return posNode;
 		}
 		return null;
+	}
+
+	private static List<Tree> getNodes(Tree tree, String value) {
+		List<Tree> nodes = new ArrayList<Tree>();
+		if (tree == null)
+			return nodes;
+
+		if (tree.label().value().equals(value))
+			nodes.add(tree);
+
+		for (Tree child : tree.getChildrenAsList()) {
+			nodes.addAll(getNodes(child, value));
+		}
+
+		return nodes;
 	}
 
 	private static List<Tree> getAllNodes(Tree tree, String value, boolean onlyLeafs) {
