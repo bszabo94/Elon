@@ -1,6 +1,6 @@
 package org.upb.fsw.elon;
 
-public class Test {
+public class Tester {
 
 	public static void main(String[] args) {
 		
