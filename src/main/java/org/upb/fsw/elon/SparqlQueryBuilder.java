@@ -9,11 +9,13 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 import org.aksw.qa.annotation.spotter.ASpotter;
 import org.aksw.qa.annotation.spotter.Spotlight;
 import org.aksw.qa.commons.datastructure.Entity;
+import org.apache.commons.text.similarity.LevenshteinDistance;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -25,95 +27,52 @@ import edu.stanford.nlp.trees.Tree;
 
 public class SparqlQueryBuilder {
 
-	private ASpotter spotter;
+	private static String PROPERTY_QUERY_TEMPLATE = "select distinct ?property where { %s ?property [] . }";
 
-	public SparqlQueryBuilder() {
-		this.spotter = new Spotlight();
-	}
+	public ASpotter spotter;
 
 	public static void main(String[] args) throws URISyntaxException, IOException {
 
 		ASpotter spotter = new Spotlight();
 
-//		URL url = SparqlQueryBuilder.class.getResource("/qald-9-train-multilingual.json");
-
-//		System.out.println(url);
-//		File file = new File(url);
 		String qald9train = "";
-//		System.out.println("File read");
-//		System.out.println(file);
-
-		BufferedWriter writer = Files.newBufferedWriter(Paths.get("NPentities.txt"));
-		try {
-			qald9train = new String(
-					Files.readAllBytes(
-							Paths.get(SparqlQueryBuilder.class.getResource("/qald-9-train-multilingual.json").toURI())),
-					StandardCharsets.UTF_8);
-
-		} catch (IOException | URISyntaxException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-
-		JsonParser parser = new JsonParser();
-		JsonObject jo = parser.parse(qald9train).getAsJsonObject();
-		JsonArray questions = jo.getAsJsonArray("questions");
-		for (int i = 0; i < 20; i++) {
-
+//
+//			for (Tree t : np) {
+//				if (possibleEntity(t)) {
+//					List<Entity> foundEntities = spotter.getEntities(treeToString(t, true)).get("en");
+//					writer.write(treeToString(t, true) + "\n***********\n");
+//					if (foundEntities == null || foundEntities.isEmpty())
+//						continue;
+//					for (Entity e : foundEntities) {
+//						writer.write(e.getUris().get(0).getURI()+"\n");
+//					}
+//				}
+//			}
+////				writer.write("depth: " + t.depth() + "\n" + t.pennString() + "\n");
 //		}
-//		for (JsonElement q : questions) {
-			JsonElement q = questions.get(i);
-			String question = "";
-			for (JsonElement innerq : q.getAsJsonObject().getAsJsonArray("question")) {
-				if (innerq.getAsJsonObject().getAsJsonPrimitive("language").getAsString().equals("en")) {
-					question = innerq.getAsJsonObject().getAsJsonPrimitive("string").getAsString();
-					break;
-				}
-			}
-
-			Sentence sentence = new Sentence(question);
-			Tree tree = sentence.parse();
-			if (!tree.getChild(0).label().value().equals("SBARQ"))
-				continue;
-
-			List<Tree> np = getNodes(tree, "NP");
-
-			writer.write("-----------------------\n");
-			writer.write(question + "\n");
-			writer.write(tree.pennString());
-			writer.write("__________________\n");
-
-			for (Tree t : np) {
-				if (possibleEntity(t)) {
-					List<Entity> foundEntities = spotter.getEntities(treeToString(t, true)).get("en");
-					writer.write(treeToString(t, true) + "\n***********\n");
-					if (foundEntities == null || foundEntities.isEmpty())
-						continue;
-					for (Entity e : foundEntities) {
-						writer.write(e.getUris().get(0).getURI()+"\n");
-					}
-				}
-			}
-//				writer.write("depth: " + t.depth() + "\n" + t.pennString() + "\n");
-		}
-
-		writer.close();
-
-//		String question = "What is the birthplace of Angela Merkel?";
 //
-//		Sentence sentence = new Sentence(question);
-//		Tree tree = sentence.parse();
-//		Tree sbarq = getChildbyLabel(tree, "SBARQ");
-//
-//		System.out.println(tree.pennString());
-//		System.out.println(tree.depth());
-//		System.out.println(sbarq.depth());
-
-//		SparqlQueryBuilder.processQuestion(question);
+//		writer.close();
 
 	}
 
-	public static void traverseTree(Tree tree) {
+	public SparqlQueryBuilder() {
+		this.spotter = new Spotlight();
+	}
+
+	public String evalTree(Tree tree) {
+
+		switch (tree.label().value()) {
+		case "ROOT":
+			return evalTree(tree.getChild(0));
+		case "SBARQ":
+			return evalSBARQ(tree);
+
+		}
+
+		return null;
+	}
+
+	public void traverseTree(Tree tree) {
 		System.out.println("lvl 0");
 		System.out.println(tree);
 
@@ -125,23 +84,75 @@ public class SparqlQueryBuilder {
 
 	}
 
-	private static String evalSBARQ(Tree sbarq) {
+	public String evalSBARQ(Tree sbarq) {
 		return evalSQ(getChildbyLabel(sbarq, "SQ"));
 	}
 
-	private static String evalSQ(Tree sq) {
+	public String evalSQ(Tree sq) {
+//		String np = evalNP(getChildbyLabel(sq, "NP"));
+//
+//		String pp = evalPP(getChildbyLabel(sq, "PP"));
 		return evalNP(getChildbyLabel(sq, "NP"));
 	}
 
-	private static String evalNP(Tree np) {
-		if (possibleEntity(np)) {
-
-		}
-
-		return null;
+	public String evalPP(Tree pp) {
+		return evalNP(getChildbyLabel(pp, "NP"));
 	}
 
-	public static void processQuestion(String question) {
+	public String evalNP(Tree np) {
+		if (possibleEntity(np)) {
+			List<Entity> foundEntities = this.spotter.getEntities(treeToString(np, true)).get("en");
+
+			// TODO occurance for more than one possible entities
+			Entity candidate = foundEntities.get(0);
+
+			return candidate.getUris().get(0).getURI();
+
+		} else if (hasChildWithLabel(np, "PP")) {
+			String entityURI = evalPP(getChildbyLabel(np, "PP"));
+			String propertyURI = findProperty(entityURI, treeToString(getChildbyLabel(np, "NP"), false));
+			
+			List<String> answer = QueryController.findPropertyofEntity("<" + propertyURI + ">", "<" + entityURI + ">");
+			
+			String answers = "";
+			for(String a : answer)
+				answers += a + "\n";
+			
+			return answers;
+			
+		} else {
+			return null;
+		}
+	}
+
+	public String findProperty(String entityURI, String property) {
+		String properEntityURI = "<" + entityURI + ">";
+		String queryString = String.format(PROPERTY_QUERY_TEMPLATE, properEntityURI);
+		List<String> propertyCandidates = QueryController.doQueryAsList(queryString);
+
+		sortRelations(propertyCandidates, property);
+
+		if (!propertyCandidates.isEmpty())
+			return propertyCandidates.get(0);
+		else
+			return null;
+	}
+
+	public void sortRelations(List<String> relations, String base) {
+		relations.sort(new Comparator<String>() {
+			@Override
+			public int compare(String o1, String o2) {
+				LevenshteinDistance dist = LevenshteinDistance.getDefaultInstance();
+				Integer d1 = dist.apply(removeNS(o1).toLowerCase(), base.toLowerCase());
+				Integer d2 = dist.apply(removeNS(o2).toLowerCase(), base.toLowerCase());
+
+				return d1 - d2;
+			}
+
+		});
+	}
+
+	public void processQuestion(String question) {
 		Sentence sentence = new Sentence(question);
 		Tree tree = sentence.parse();
 
@@ -154,7 +165,7 @@ public class SparqlQueryBuilder {
 //		System.out.println(treeToString(tree, false));
 	}
 
-	private static boolean possibleEntity(Tree t) {
+	public boolean possibleEntity(Tree t) {
 		if (t.depth() > 2)
 			return false;
 
@@ -165,7 +176,15 @@ public class SparqlQueryBuilder {
 		return false;
 	}
 
-	private static Tree getChildbyLabel(Tree tree, String label) {
+	public boolean hasChildWithLabel(Tree t, String label) {
+		for (Tree child : t.getChildrenAsList())
+			if (child.label().value().equals(label))
+				return true;
+
+		return false;
+	}
+
+	public Tree getChildbyLabel(Tree tree, String label) {
 		for (Tree child : tree.getChildrenAsList())
 			if (child.value().toUpperCase().equals(label.toUpperCase()))
 				return child;
@@ -173,14 +192,14 @@ public class SparqlQueryBuilder {
 		return null;
 	}
 
-	private String removeNS(String fullname) {
+	public String removeNS(String fullname) {
 		String reverse = new StringBuilder(fullname).reverse().toString();
 		reverse = reverse.substring(0, reverse.indexOf('/'));
 
 		return new StringBuilder(reverse).reverse().toString();
 	}
 
-	private static Tree getNode(Tree tree, String value) {
+	public Tree getNode(Tree tree, String value) {
 		if (tree == null)
 			return null;
 
@@ -194,7 +213,7 @@ public class SparqlQueryBuilder {
 		return null;
 	}
 
-	private static List<Tree> getNodes(Tree tree, String value) {
+	public List<Tree> getNodes(Tree tree, String value) {
 		List<Tree> nodes = new ArrayList<Tree>();
 		if (tree == null)
 			return nodes;
@@ -209,7 +228,7 @@ public class SparqlQueryBuilder {
 		return nodes;
 	}
 
-	private static List<Tree> getAllNodes(Tree tree, String value, boolean onlyLeafs) {
+	public List<Tree> getAllNodes(Tree tree, String value, boolean onlyLeafs) {
 		List<Tree> nodes = new ArrayList<Tree>(), childNodes = new ArrayList<Tree>();
 
 		for (Tree child : tree.getChildrenAsList()) {
@@ -226,7 +245,7 @@ public class SparqlQueryBuilder {
 		return nodes;
 	}
 
-	private static String treeToString(Tree tree, boolean enableDT) {
+	public String treeToString(Tree tree, boolean enableDT) {
 		StringBuilder sb = new StringBuilder();
 
 		for (Tree child : tree.getChildrenAsList()) {
