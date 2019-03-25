@@ -13,8 +13,8 @@ public class StructureMeasure {
 		subtrees.add(t);
 
 		for (Tree child : t.getChildrenAsList())
-			if (!child.isLeaf())
-				subtrees.addAll(getSubTrees(child));
+//			if (!child.isLeaf())
+			subtrees.addAll(getSubTrees(child));
 
 		return subtrees;
 	}
@@ -22,9 +22,6 @@ public class StructureMeasure {
 	public static boolean identical(Tree t1, Tree t2) {
 		if (t1.getChildrenAsList().size() != t2.getChildrenAsList().size())
 			return false;
-
-		if (t1.isLeaf() && t2.isLeaf())
-			return true;
 
 		if (!t1.label().value().equals(t2.label().value()))
 			return false;
@@ -34,5 +31,16 @@ public class StructureMeasure {
 				return false;
 
 		return true;
+	}
+
+	public static void removeLeafs(Tree t) {
+		for (int i = 0; i < t.children().length; i++) {
+			Tree child = t.getChild(i);
+			if (child.isLeaf()) {
+				t.removeChild(i);
+				continue;
+			}
+			removeLeafs(child);
+		}
 	}
 }

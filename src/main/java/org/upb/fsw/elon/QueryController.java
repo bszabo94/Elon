@@ -18,13 +18,25 @@ import com.google.gson.JsonParser;
 public class QueryController {
 
 	private static String PREFIX_STRING = "prefix dbo: <http://dbpedia.org/ontology/> prefix dbr: <http://dbpedia.org/resource/> ",
-			SIMPLE_QUERY_TEMPLATE = "select distinct ?uri where { %s %s ?uri .}";
+			SIMPLE_QUERY_TEMPLATE_OBJECT = "select distinct ?uri where { %s %s ?uri .}",
+			SIMPLE_QUERY_TEMPLATE_SUBJECT = "select distinct ?uri where { ?uri %s %s .}",
+			SIMPLE_QUERY_TEMPLATE_RELATION = "select distinct ?uri where { %s ?uri %s .}";
 
-	public static List<String> findPropertyofEntity(String propertyURI, String entityURI){
-		String queryString = String.format(SIMPLE_QUERY_TEMPLATE, entityURI, propertyURI);
+	public static List<String> findObject(String propertyURI, String subjectURI) {
+		String queryString = buildQueryString(SIMPLE_QUERY_TEMPLATE_OBJECT, propertyURI, subjectURI);
 		return doQueryAsList(queryString);
 	}
-	
+
+	public static List<String> findSubject(String propertyURI, String objectURI) {
+		String queryString = buildQueryString(SIMPLE_QUERY_TEMPLATE_SUBJECT, propertyURI, objectURI);
+		return doQueryAsList(queryString);
+	}
+
+	public static List<String> findRelation(String propertyURI, String relationURI) {
+		String queryString = buildQueryString(SIMPLE_QUERY_TEMPLATE_RELATION, propertyURI, relationURI);
+		return doQueryAsList(queryString);
+	}
+
 	public static List<String> doQueryAsList(String queryString) {
 		Query query = QueryFactory.create(PREFIX_STRING + queryString);
 
@@ -58,4 +70,28 @@ public class QueryController {
 
 		return resJson.getAsJsonObject();
 	}
+
+	private static String buildQueryString(String template, String... parameters) {
+
+		List<String> finalQueryParts = new ArrayList<String>();
+		String finalQuery = template;
+		String right;
+
+		for (String param : parameters) {
+			int pos = finalQuery.indexOf("%s");
+			String left = finalQuery.substring(0, pos + 2);
+			finalQuery = finalQuery.substring(pos + 2, finalQuery.length());
+			left = String.format(left, param);
+			finalQueryParts.add(left);
+		}
+
+		right = finalQuery;
+		finalQuery = new String();
+		for (String part : finalQueryParts)
+			finalQuery += part;
+		finalQuery += right;
+
+		return finalQuery;
+	}
+
 }

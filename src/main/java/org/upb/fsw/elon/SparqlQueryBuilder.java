@@ -16,6 +16,7 @@ import org.aksw.qa.annotation.spotter.ASpotter;
 import org.aksw.qa.annotation.spotter.Spotlight;
 import org.aksw.qa.commons.datastructure.Entity;
 import org.apache.commons.text.similarity.LevenshteinDistance;
+import org.assertj.core.util.Arrays;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -84,22 +85,69 @@ public class SparqlQueryBuilder {
 
 	}
 
-	public String evalSBARQ(Tree sbarq) {
+	public String evalSBARQ(Tree sbarq, EvaluationFlags... evaluationFlags) {
 		return evalSQ(getChildbyLabel(sbarq, "SQ"));
 	}
 
-	public String evalSQ(Tree sq) {
-//		String np = evalNP(getChildbyLabel(sq, "NP"));
-//
-//		String pp = evalPP(getChildbyLabel(sq, "PP"));
+	public String evalSQ(Tree sq, EvaluationFlags... evaluationFlags) {
+		if (sq.numChildren() == 1 && hasChildWithLabel(sq, "VP")) {
+			return evalVP(getChildbyLabel(sq, "VP"), EvaluationFlags.OBJECTQUERY);
+		} else if (hasChildWithLabel(sq, "VBD") && hasChildWithLabel(sq, "VP")) {
+			return evalVP(getChildbyLabel(sq, "VP"), EvaluationFlags.SUBJECTQUERY);
+		}
 		return evalNP(getChildbyLabel(sq, "NP"));
 	}
 
-	public String evalPP(Tree pp) {
+	public String evalVP(Tree vp, EvaluationFlags... evaluationFlags) {
+		if (hasChildWithLabel(vp, "NP")) {
+			String entityURI = evalNP(getChildbyLabel(vp, "NP"));
+			// TODO other than VBD
+
+			String propertyURI = findProperty(entityURI, treeToString(getChildbyLabel(vp, "VBD"), false));
+
+			List<String> answer;
+			if (Arrays.asList(evaluationFlags).contains(EvaluationFlags.OBJECTQUERY))
+				answer = QueryController.findObject("<" + propertyURI + ">", "<" + entityURI + ">");
+			else if (Arrays.asList(evaluationFlags).contains(EvaluationFlags.SUBJECTQUERY))
+				answer = QueryController.findSubject("<" + propertyURI + ">", "<" + entityURI + ">");
+			else // TODO
+				answer = QueryController.findObject("<" + propertyURI + ">", "<" + entityURI + ">");
+
+			String answers = "";
+			for (String a : answer)
+				answers += a + "\n";
+
+			return answers;
+		} else if (hasChildWithLabel(vp, "PP")) {
+			String entityURI = evalPP(getChildbyLabel(vp, "PP"));
+			// TODO other than VBD
+
+			String propertyURI = findProperty(entityURI, treeToString(getChildbyLabel(vp, "VBN"), false));
+
+			List<String> answer;
+			if (Arrays.asList(evaluationFlags).contains(EvaluationFlags.OBJECTQUERY))
+				answer = QueryController.findObject("<" + propertyURI + ">", "<" + entityURI + ">");
+			else if (Arrays.asList(evaluationFlags).contains(EvaluationFlags.SUBJECTQUERY))
+				answer = QueryController.findSubject("<" + propertyURI + ">", "<" + entityURI + ">");
+			else // TODO
+				answer = QueryController.findObject("<" + propertyURI + ">", "<" + entityURI + ">");
+
+			String answers = "";
+			for (String a : answer)
+				answers += a + "\n";
+
+			return answers;
+		}
+
+		// TODO other than np
+		return null;
+	}
+
+	public String evalPP(Tree pp, EvaluationFlags... evaluationFlags) {
 		return evalNP(getChildbyLabel(pp, "NP"));
 	}
 
-	public String evalNP(Tree np) {
+	public String evalNP(Tree np, EvaluationFlags... evaluationFlags) {
 		if (possibleEntity(np)) {
 			List<Entity> foundEntities = this.spotter.getEntities(treeToString(np, true)).get("en");
 
@@ -111,15 +159,15 @@ public class SparqlQueryBuilder {
 		} else if (hasChildWithLabel(np, "PP")) {
 			String entityURI = evalPP(getChildbyLabel(np, "PP"));
 			String propertyURI = findProperty(entityURI, treeToString(getChildbyLabel(np, "NP"), false));
-			
-			List<String> answer = QueryController.findPropertyofEntity("<" + propertyURI + ">", "<" + entityURI + ">");
-			
+
+			List<String> answer = QueryController.findObject("<" + propertyURI + ">", "<" + entityURI + ">");
+
 			String answers = "";
-			for(String a : answer)
+			for (String a : answer)
 				answers += a + "\n";
-			
+
 			return answers;
-			
+
 		} else {
 			return null;
 		}
@@ -170,7 +218,8 @@ public class SparqlQueryBuilder {
 			return false;
 
 		for (Tree child : t.getChildrenAsList())
-			if (child.label().value().equals("NNP") || child.label().value().equals("NNPS"))
+			if (child.label().value().equals("NNP") || child.label().value().equals("NNPS")
+					|| child.label().value().equals("NNS"))
 				return true;
 
 		return false;

@@ -422,7 +422,7 @@ public class Elon {
 		while(!relations.isEmpty()) {
 //			String bestproperty = ranker.rank(properties);
 			props.add(relations.get(0));
-			String phFinishedQuery = phQuery.buildQueryString(props);
+			String phFinishedQuery = ""; // TODO phQuery.buildQueryString(props);
 			//System.out.println(phFinishedQuery);
 			this.lastQuery = phFinishedQuery;
 			ResultSet res;
