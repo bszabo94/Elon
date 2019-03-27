@@ -5,4 +5,3 @@ target/*
 /target/
 temp/
 /temp/
-src/main/java/org/upb/fsw/elon/Tester.java
