@@ -38,11 +38,13 @@ import net.sf.extjwnl.JWNLException;
 import net.sf.extjwnl.data.IndexWord;
 import net.sf.extjwnl.data.POS;
 import net.sf.extjwnl.data.PointerUtils;
+import net.sf.extjwnl.data.Synset;
 import net.sf.extjwnl.data.Word;
 import net.sf.extjwnl.data.list.PointerTargetNodeList;
 import net.sf.extjwnl.data.list.PointerTargetTree;
 import net.sf.extjwnl.data.list.PointerTargetTreeNode;
 import net.sf.extjwnl.dictionary.Dictionary;
+import net.sf.extjwnl.dictionary.MorphologicalProcessor;
 
 import org.upb.fsw.elon.EvaluationFlags;
 
@@ -54,31 +56,50 @@ public class Tester {
 
 //		String qfile = "/qald-9-train-questions.json";
 //		List<String> questions = loadQ(qfile);
-//
+		Tree t = new Sentence("What is the birthplace of Albert Einstein?").parse();
+		System.out.println(t.pennString());
 //		SparqlQueryBuilder sparqlQueryBuilder = new SparqlQueryBuilder();
-//		for (String q : questions) {
+////		for (String q : questions) {
+//			String q = "Which people were born in Heraklion?";
 //			Tree t = new Sentence(q).parse();
 //			System.out.println(q);
 //			System.out.println(sparqlQueryBuilder.evalTree(t));
 //			System.out.println("--------------------");
 //		}
+		
+//
+//		Dictionary dict = Dictionary.getDefaultResourceInstance();
+//		MorphologicalProcessor mp = dict.getMorphologicalProcessor();
+//		
+//		
+//		IndexWord mw = mp.lookupBaseForm(POS.VERB, "born in");
 
-		Dictionary dict = Dictionary.getDefaultResourceInstance();
-//		IndexWord word = dict.getIndexWord(POS.NOUN, "leader");
+//		System.out.println(mw);
+//		mw.getSenses().stream().forEach(s -> {
+//			System.out.println(s);
+//		});
+	
+		
+		
+		
+//		System.out.println(iw.getSenses().get(0).getKey());
+		
+//		IndexWord word = dict.getIndexWord(POS.VERB, "like");
+//		System.out.println(PointerUtils.getSynonyms(word.getSenses().get(0)));
 //		IndexWord word = dict.lookupIndexWord(POS.NOUN, "leader");
 		
-		String wd = "developed";
-		POS.getAllPOS().forEach(pos -> {
-			try {
-				IndexWord iwd = dict.lookupIndexWord(pos, wd);
-				System.out.println(pos + ": " + iwd);
-				if(iwd != null)
-					System.out.println(iwd.getSenses());
-			} catch (JWNLException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-		});
+//		String wd = "developed";
+//		POS.getAllPOS().forEach(pos -> {
+//			try {
+//				IndexWord iwd = dict.lookupIndexWord(pos, wd);
+//				System.out.println(pos + ": " + iwd);
+//				if(iwd != null)
+//					System.out.println(iwd.getSenses());
+//			} catch (JWNLException e) {
+//				// TODO Auto-generated catch block
+//				e.printStackTrace();
+//			}
+//		});
 //		System.out.println(dict.getIndexWord(POS.NOUN, lemma));
 		
 		

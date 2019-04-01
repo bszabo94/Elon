@@ -9,6 +9,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
@@ -25,10 +26,14 @@ import com.google.gson.JsonParser;
 
 import edu.stanford.nlp.simple.Sentence;
 import edu.stanford.nlp.trees.Tree;
+import net.sf.extjwnl.JWNLException;
+import net.sf.extjwnl.data.POS;
+import net.sf.extjwnl.dictionary.Dictionary;
 
 public class SparqlQueryBuilder {
 
-	private static String PROPERTY_QUERY_TEMPLATE = "select distinct ?property where { %s ?property [] . }";
+	private static String PROPERTY_QUERY_TEMPLATE = "select distinct ?property where { %s ?property [] . }",
+			PROPERTY_QUERY_TEMPLATE_REV = "select distinct ?property where { [] ?property %s . }";
 
 	public ASpotter spotter;
 
@@ -60,7 +65,7 @@ public class SparqlQueryBuilder {
 		this.spotter = new Spotlight();
 	}
 
-	public String evalTree(Tree tree) {
+	public String evalTree(Tree tree) throws JWNLException {
 
 		switch (tree.label().value()) {
 		case "ROOT":
@@ -85,11 +90,11 @@ public class SparqlQueryBuilder {
 
 	}
 
-	public String evalSBARQ(Tree sbarq, EvaluationFlags... evaluationFlags) {
+	public String evalSBARQ(Tree sbarq, EvaluationFlags... evaluationFlags) throws JWNLException {
 		return evalSQ(getChildbyLabel(sbarq, "SQ"));
 	}
 
-	public String evalSQ(Tree sq, EvaluationFlags... evaluationFlags) {
+	public String evalSQ(Tree sq, EvaluationFlags... evaluationFlags) throws JWNLException {
 		if (sq.numChildren() == 1 && hasChildWithLabel(sq, "VP")) {
 			return evalVP(getChildbyLabel(sq, "VP"), EvaluationFlags.OBJECTQUERY);
 		} else if (hasChildWithLabel(sq, "VBD") && hasChildWithLabel(sq, "VP")) {
@@ -98,12 +103,12 @@ public class SparqlQueryBuilder {
 		return evalNP(getChildbyLabel(sq, "NP"));
 	}
 
-	public String evalVP(Tree vp, EvaluationFlags... evaluationFlags) {
+	public String evalVP(Tree vp, EvaluationFlags... evaluationFlags) throws JWNLException {
 		if (hasChildWithLabel(vp, "NP")) {
 			String entityURI = evalNP(getChildbyLabel(vp, "NP"));
 			// TODO other than VBD
 
-			String propertyURI = findProperty(entityURI, treeToString(getChildbyLabel(vp, "VBD"), false));
+			String propertyURI = findProperty(entityURI, treeToString(getChildbyLabel(vp, "VBD"), false), POS.VERB);
 
 			List<String> answer;
 			if (Arrays.asList(evaluationFlags).contains(EvaluationFlags.OBJECTQUERY))
@@ -122,7 +127,7 @@ public class SparqlQueryBuilder {
 			String entityURI = evalPP(getChildbyLabel(vp, "PP"));
 			// TODO other than VBD
 
-			String propertyURI = findProperty(entityURI, treeToString(getChildbyLabel(vp, "VBN"), false));
+			String propertyURI = findProperty(entityURI, treeToString(getChildbyLabel(vp, "VBN"), false), POS.VERB);
 
 			List<String> answer;
 			if (Arrays.asList(evaluationFlags).contains(EvaluationFlags.OBJECTQUERY))
@@ -143,11 +148,11 @@ public class SparqlQueryBuilder {
 		return null;
 	}
 
-	public String evalPP(Tree pp, EvaluationFlags... evaluationFlags) {
+	public String evalPP(Tree pp, EvaluationFlags... evaluationFlags) throws JWNLException {
 		return evalNP(getChildbyLabel(pp, "NP"));
 	}
 
-	public String evalNP(Tree np, EvaluationFlags... evaluationFlags) {
+	public String evalNP(Tree np, EvaluationFlags... evaluationFlags) throws JWNLException {
 		if (possibleEntity(np)) {
 			List<Entity> foundEntities = this.spotter.getEntities(treeToString(np, true)).get("en");
 
@@ -158,7 +163,7 @@ public class SparqlQueryBuilder {
 
 		} else if (hasChildWithLabel(np, "PP")) {
 			String entityURI = evalPP(getChildbyLabel(np, "PP"));
-			String propertyURI = findProperty(entityURI, treeToString(getChildbyLabel(np, "NP"), false));
+			String propertyURI = findProperty(entityURI, treeToString(getChildbyLabel(np, "NP"), false), POS.NOUN);
 
 			List<String> answer = QueryController.findObject("<" + propertyURI + ">", "<" + entityURI + ">");
 
@@ -173,15 +178,30 @@ public class SparqlQueryBuilder {
 		}
 	}
 
-	public String findProperty(String entityURI, String property) {
+	public String findProperty(String entityURI, String property, POS pos) throws JWNLException {
 		String properEntityURI = "<" + entityURI + ">";
-		String queryString = String.format(PROPERTY_QUERY_TEMPLATE, properEntityURI);
-		List<String> propertyCandidates = QueryController.doQueryAsList(queryString);
+		String queryString = String.format(PROPERTY_QUERY_TEMPLATE_REV, properEntityURI);
+		List<RelationCandidate> propertyCandidates = new ArrayList<RelationCandidate>();
+		Dictionary dict = Dictionary.getDefaultResourceInstance();
 
-		sortRelations(propertyCandidates, property);
+		for (String candidateURI : QueryController.doQueryAsList(queryString)) {
+			RelationCandidate candidate = new RelationCandidate(candidateURI);
+			try {
+				candidate.calcScore(property, pos, dict);
+			} catch (JWNLException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			propertyCandidates.add(candidate);
+		}
+		;
+
+		propertyCandidates.sort((c1, c2) -> {
+			return c2.getScore() < c1.getScore() ? 1 : -1;
+		});
 
 		if (!propertyCandidates.isEmpty())
-			return propertyCandidates.get(0);
+			return propertyCandidates.get(0).getURI();
 		else
 			return null;
 	}
