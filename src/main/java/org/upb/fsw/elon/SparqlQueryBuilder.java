@@ -36,6 +36,7 @@ public class SparqlQueryBuilder {
 			PROPERTY_QUERY_TEMPLATE_REV = "select distinct ?property where { [] ?property %s . }";
 
 	public ASpotter spotter;
+	private Dictionary dict;
 
 	public static void main(String[] args) throws URISyntaxException, IOException {
 
@@ -61,8 +62,9 @@ public class SparqlQueryBuilder {
 
 	}
 
-	public SparqlQueryBuilder() {
+	public SparqlQueryBuilder() throws JWNLException {
 		this.spotter = new Spotlight();
+		this.dict = Dictionary.getDefaultResourceInstance();
 	}
 
 	public String evalTree(Tree tree) throws JWNLException {
@@ -76,18 +78,6 @@ public class SparqlQueryBuilder {
 		}
 
 		return null;
-	}
-
-	public void traverseTree(Tree tree) {
-		System.out.println("lvl 0");
-		System.out.println(tree);
-
-		System.out.println("lvl 1");
-		List<Tree> children1 = tree.getChildrenAsList().get(0).getChildrenAsList();
-		System.out.println(children1);
-		for (Tree t : children1)
-			System.out.println(t + "\n-------");
-
 	}
 
 	public String evalSBARQ(Tree sbarq, EvaluationFlags... evaluationFlags) throws JWNLException {
@@ -108,7 +98,8 @@ public class SparqlQueryBuilder {
 			String entityURI = evalNP(getChildbyLabel(vp, "NP"));
 			// TODO other than VBD
 
-			String propertyURI = findProperty(entityURI, treeToString(getChildbyLabel(vp, "VBD"), false), POS.VERB);
+			String propertyURI = findProperty(entityURI, treeToString(getChildbyLabel(vp, "VBD"), false), POS.VERB,
+					true);
 
 			List<String> answer;
 			if (Arrays.asList(evaluationFlags).contains(EvaluationFlags.OBJECTQUERY))
@@ -127,7 +118,8 @@ public class SparqlQueryBuilder {
 			String entityURI = evalPP(getChildbyLabel(vp, "PP"));
 			// TODO other than VBD
 
-			String propertyURI = findProperty(entityURI, treeToString(getChildbyLabel(vp, "VBN"), false), POS.VERB);
+			String propertyURI = findProperty(entityURI, treeToString(getChildbyLabel(vp, "VBN"), false), POS.VERB,
+					true);
 
 			List<String> answer;
 			if (Arrays.asList(evaluationFlags).contains(EvaluationFlags.OBJECTQUERY))
@@ -163,7 +155,8 @@ public class SparqlQueryBuilder {
 
 		} else if (hasChildWithLabel(np, "PP")) {
 			String entityURI = evalPP(getChildbyLabel(np, "PP"));
-			String propertyURI = findProperty(entityURI, treeToString(getChildbyLabel(np, "NP"), false), POS.NOUN);
+			String propertyURI = findProperty(entityURI, treeToString(getChildbyLabel(np, "NP"), false), POS.NOUN,
+					false);
 
 			List<String> answer = QueryController.findObject("<" + propertyURI + ">", "<" + entityURI + ">");
 
@@ -178,32 +171,70 @@ public class SparqlQueryBuilder {
 		}
 	}
 
-	public String findProperty(String entityURI, String property, POS pos) throws JWNLException {
+	public List<RelationCandidate> findPropList(String entityURI, String property, POS pos, boolean rev)
+			throws JWNLException {
 		String properEntityURI = "<" + entityURI + ">";
-		String queryString = String.format(PROPERTY_QUERY_TEMPLATE_REV, properEntityURI);
-		List<RelationCandidate> propertyCandidates = new ArrayList<RelationCandidate>();
-		Dictionary dict = Dictionary.getDefaultResourceInstance();
+		String queryString = rev ? String.format(PROPERTY_QUERY_TEMPLATE_REV, properEntityURI)
+				: String.format(PROPERTY_QUERY_TEMPLATE, properEntityURI);
 
-		for (String candidateURI : QueryController.doQueryAsList(queryString)) {
+		List<RelationCandidate> propertyCandidates = new ArrayList<RelationCandidate>();
+		List<String> candidateURIs = QueryController.doQueryAsList(queryString);
+		RelationBase relationBase = new RelationBase(property, pos, dict);
+
+		for (String candidateURI : candidateURIs) {
 			RelationCandidate candidate = new RelationCandidate(candidateURI);
-			try {
-				candidate.calcScore(property, pos, dict);
-			} catch (JWNLException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
+
+			relationBase.calcDistances(candidate);
 			propertyCandidates.add(candidate);
 		}
 		;
 
-		propertyCandidates.sort((c1, c2) -> {
-			return c2.getScore() < c1.getScore() ? 1 : -1;
-		});
+//		propertyCandidates.sort((c1, c2) -> {
+//			return c2.getDistance() < c1.getDistance() ? 1 : -1;
+//		});
 
-		if (!propertyCandidates.isEmpty())
-			return propertyCandidates.get(0).getURI();
-		else
-			return null;
+		return propertyCandidates;
+	}
+
+	public String findProperty(String entityURI, String property, POS pos, boolean rev) throws JWNLException {
+//		String properEntityURI = "<" + entityURI + ">";
+//		String queryString = rev ? String.format(PROPERTY_QUERY_TEMPLATE_REV, properEntityURI)
+//				: String.format(PROPERTY_QUERY_TEMPLATE, properEntityURI);
+//
+//		List<RelationBase> relationBases = new ArrayList<RelationBase>();
+//		List<RelationCandidate> propertyCandidates = new ArrayList<RelationCandidate>();
+//
+//		if (pos == POS.NOUN) {
+//			relationBases.add(new RelationBase(property, pos, this.dict));
+//		} else if (pos == POS.VERB) {
+//			// TODO
+//		}
+//
+//		List<String> candidateURIs = QueryController.doQueryAsList(queryString);
+//
+//		for (String candidateURI : candidateURIs) {
+//			RelationCandidate candidate = new RelationCandidate(candidateURI);
+//			
+//			if(candidate.getPhrase().equals("capital")) {
+//				int a = 0;
+//				System.out.println(a);
+//			}
+//
+//			for (RelationBase base : relationBases)
+//				candidate.calcDist(base);
+//
+//			propertyCandidates.add(candidate);
+//		}
+//		;
+//
+//		propertyCandidates.sort((c1, c2) -> {
+//			return c2.getDistance() < c1.getDistance() ? 1 : -1;
+//		});
+//
+//		if (!propertyCandidates.isEmpty())
+//			return propertyCandidates.get(0).getURI();
+//		else
+		return null;
 	}
 
 	public void sortRelations(List<String> relations, String base) {

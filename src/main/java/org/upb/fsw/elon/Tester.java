@@ -11,11 +11,16 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.OptionalDouble;
+import java.util.Set;
+import java.util.stream.Collector;
+import java.util.stream.Collectors;
 import java.lang.reflect.Type;
 
 import org.aksw.qa.commons.datastructure.Entity;
@@ -45,6 +50,7 @@ import net.sf.extjwnl.data.list.PointerTargetTree;
 import net.sf.extjwnl.data.list.PointerTargetTreeNode;
 import net.sf.extjwnl.dictionary.Dictionary;
 import net.sf.extjwnl.dictionary.MorphologicalProcessor;
+import net.sf.extjwnl.util.CharSequenceTokenizer;
 
 import org.upb.fsw.elon.EvaluationFlags;
 
@@ -56,9 +62,8 @@ public class Tester {
 
 //		String qfile = "/qald-9-train-questions.json";
 //		List<String> questions = loadQ(qfile);
-		Tree t = new Sentence("What is the birthplace of Albert Einstein?").parse();
-		System.out.println(t.pennString());
-//		SparqlQueryBuilder sparqlQueryBuilder = new SparqlQueryBuilder();
+
+		SparqlQueryBuilder sparqlQueryBuilder = new SparqlQueryBuilder();
 ////		for (String q : questions) {
 //			String q = "Which people were born in Heraklion?";
 //			Tree t = new Sentence(q).parse();
@@ -67,12 +72,68 @@ public class Tester {
 //			System.out.println("--------------------");
 //		}
 		
-//
+//		List<RelationCandidate> c = sparqlQueryBuilder.findPropList("http://dbpedia.org/resource/Germany", "area", POS.NOUN, false);
+//		c.stream().forEach(can -> {
+//				double sum = 0;
+//				for(Double d : can.getDistances())
+//					sum += d;
+//				sum /= can.getDistances().size();
+//				
+//				System.out.println(can.getPhrase() + " " + sum);
+//		});
+
 //		Dictionary dict = Dictionary.getDefaultResourceInstance();
 //		MorphologicalProcessor mp = dict.getMorphologicalProcessor();
+////		
+//		Set<IndexWord> candidateset = new HashSet<IndexWord>();
+////
+//		IndexWord mw = mp.lookupBaseForm(POS.VERB, "born");
+////		
+//		List<String> mw2 = mp.lookupAllBaseForms(POS.VERB, "born");
+//		System.out.println(mw);
+//		System.out.println(mw2);
+		
+		
+		Tree t = new Sentence("What is the birthplace of Albert Einstien?").parse();
+		System.out.println(t.pennString());
+		
 //		
+////
+		
+//		for(Synset sense : mw.getSenses()) {
+////			System.out.println(sense);
+//			for(Word w : sense.getWords()) {
+////				System.out.println(w);
+//				if(dict.getIndexWord(POS.NOUN, w.getLemma()) != null) {
+//					candidateset.add(dict.getIndexWord(POS.NOUN, w.getLemma()));
+//				}
+//			}
+//		}
 //		
-//		IndexWord mw = mp.lookupBaseForm(POS.VERB, "born in");
+//		for(IndexWord iw : candidateset) {
+//			System.out.println(iw);
+//		}
+
+		
+//		mw.getSenses().stream().forEach(sense -> {
+//			sense.getWords().stream().forEach(word -> {
+//				IndexWord w;
+//				try {
+//					w = dict.lookupIndexWord(POS.NOUN, word.getLemma());
+//					if(w != null)
+//						candidateset.add(w);
+//				} catch (JWNLException e) {
+//					// TODO Auto-generated catch block
+//					e.printStackTrace();
+//				}
+//				
+//			});
+//		});
+//		
+//		candidateset.forEach(candidate -> {
+//			System.out.println(candidate);
+//		});
+		
 
 //		System.out.println(mw);
 //		mw.getSenses().stream().forEach(s -> {

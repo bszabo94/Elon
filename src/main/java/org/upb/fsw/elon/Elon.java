@@ -53,6 +53,7 @@ import edu.stanford.nlp.simple.Sentence;
 import edu.stanford.nlp.trees.Tree;
 import edu.stanford.nlp.trees.UniversalPOSMapper;
 import fuzzydl.QsugenoIntegral;
+import net.sf.extjwnl.JWNLException;
 
 /**
  * 
@@ -86,7 +87,12 @@ public class Elon {
 		this.classes = new IndexDBO_classes();
 		this.properties = new IndexDBO_properties();
 		this.ranker = new SimpleQuantityRanker();
-		this.querybuilder = new SparqlQueryBuilder();
+		try {
+			this.querybuilder = new SparqlQueryBuilder();
+		} catch (JWNLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 	
 	public static Elon getInstance() {
